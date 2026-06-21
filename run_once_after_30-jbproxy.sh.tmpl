@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+{{- if .enableJbProxy }}
+# JetBrains AI proxy (internal). Requires the `jbcentral` CLI; settings.json already
+# points apiKeyHelper/ANTHROPIC_BASE_URL at the proxy when enableJbProxy is true.
+set -euo pipefail
+
+if ! command -v jbcentral >/dev/null 2>&1; then
+  echo "jbcentral not found — install it per your internal docs, then run: jbcentral login"
+  exit 0
+fi
+
+# Ensure an authenticated proxy session.
+jbcentral login || true
+{{- else }}
+# JetBrains proxy setup skipped (enableJbProxy = false)
+{{- end }}

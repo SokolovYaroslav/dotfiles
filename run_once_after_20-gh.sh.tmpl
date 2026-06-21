@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+{{- if .installGh }}
+# Install the GitHub CLI and log in (gh config/token is intentionally NOT in this repo).
+set -euo pipefail
+
+if ! command -v gh >/dev/null 2>&1; then
+  if command -v brew >/dev/null 2>&1; then
+    brew install gh
+  else
+    echo "gh not found and Homebrew unavailable — install gh manually, then re-run: chezmoi apply"
+    exit 0
+  fi
+fi
+
+if ! gh auth status >/dev/null 2>&1; then
+  gh auth login
+fi
+{{- else }}
+# gh install/login skipped (installGh = false)
+{{- end }}

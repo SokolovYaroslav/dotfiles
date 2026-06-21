@@ -1,0 +1,37 @@
+# Rust/Cargo env, if present.
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+
+# YouTrack REST API. The token lives in 1Password and is resolved ON DEMAND,
+# never at shell init (so a plain shell start does not trigger an op unlock)
+# and never stored on disk.
+#   yt_token  -> prints the token (resolves from 1Password each call)
+#   yt_auth   -> exports YOUTRACK_TOKEN for the current shell (caches it)
+export YOUTRACK_BASE_URL="https://youtrack.jetbrains.com"
+yt_token() { op read --account {{ .opAccount }} 'op://{{ .opVaultYT }}/YT Token/credential' 2>/dev/null; }
+yt_auth()  { export YOUTRACK_TOKEN="${YOUTRACK_TOKEN:-$(yt_token)}"; }
+
+# Launch Claude Code with required secrets injected into its environment, resolved
+# from 1Password ON DEMAND at launch (op unlock happens here, not on plain shell
+# start). Secrets live only in Claude's subprocess env, never on disk — the MCP
+# config references them as ${VAR}. Add a secret with one line below.
+#   e.g. CLAUDE_SECRETS[SOME_TOKEN]='op://Vault/Item/credential'
+typeset -gA CLAUDE_SECRETS=(
+  YOUTRACK_TOKEN 'op://{{ .opVaultYT }}/YT Token/credential'
+)
+claude() {
+  local -a _inject
+  local _var _ref _val
+  for _var _ref in "${(@kv)CLAUDE_SECRETS}"; do
+    _val="$(op read --account {{ .opAccount }} "$_ref" 2>/dev/null)"
+    if [[ -z "$_val" ]]; then
+      print -u2 "claude: failed to read $_var from 1Password ($_ref)"
+      return 1
+    fi
+    _inject+=("$_var=$_val")
+  done
+  # `env` exec's the real `claude` binary via PATH — it never re-enters this function.
+  env "${_inject[@]}" claude "$@"
+}
+
+# Machine-specific overrides (not tracked by chezmoi).
+[ -f "$HOME/.zshenv.local" ] && source "$HOME/.zshenv.local"

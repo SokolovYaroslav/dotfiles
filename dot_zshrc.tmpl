@@ -1,0 +1,37 @@
+# Path to your oh-my-zsh installation.
+export ZSH="$HOME/.oh-my-zsh"
+
+# Theme. See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
+ZSH_THEME="robbyrussell"
+
+# Plugins. Standard plugins live in $ZSH/plugins/; custom in $ZSH/custom/plugins/.
+plugins=(git zsh-autosuggestions)
+
+source $ZSH/oh-my-zsh.sh
+
+# User configuration
+
+export PATH="$HOME/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
+{{ if .useOnePasswordSshAgent }}
+# Route ssh-agent through 1Password (keys live there). ssh/git also use the agent
+# via IdentityAgent in ~/.ssh/config; this points sock-reading tools at it too.
+{{- if eq .chezmoi.os "darwin" }}
+_op_ssh_sock="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
+{{- else }}
+_op_ssh_sock="$HOME/.1password/agent.sock"
+{{- end }}
+if [ -S "$_op_ssh_sock" ]; then
+    export SSH_AUTH_SOCK="$_op_ssh_sock"
+{{- if eq .chezmoi.os "darwin" }}
+elif [ -z "$SSH_AUTH_SOCK" ]; then
+    # Fall back to the launchd agent if 1Password isn't running.
+    export SSH_AUTH_SOCK=$(find /private/tmp/com.apple.launchd.*/Listeners /var/run/com.apple.launchd.*/Listeners -user "$USER" 2>/dev/null | head -1)
+{{- end }}
+fi
+unset _op_ssh_sock
+{{- end }}
+
+# Machine-specific overrides (not tracked by chezmoi). Put host-only PATH entries
+# (e.g. TinyTeX, language frameworks) here.
+[ -f "$HOME/.zshrc.local" ] && source "$HOME/.zshrc.local"

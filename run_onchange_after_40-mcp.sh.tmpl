@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+{{- if .enableMcp }}
+# Register the YouTrack MCP server at user scope. The Authorization header references
+# ${YOUTRACK_TOKEN} literally — Claude expands it at runtime from the env that the
+# claude() wrapper (see ~/.zshenv) injects from 1Password. No token is stored on disk.
+set -euo pipefail
+
+if command -v claude >/dev/null 2>&1; then
+  claude mcp remove youtrack -s user >/dev/null 2>&1 || true
+  claude mcp add --scope user --transport http youtrack https://youtrack.jetbrains.com/mcp \
+    --header 'Authorization: Bearer ${YOUTRACK_TOKEN}'
+else
+  echo "claude CLI not found — skipping YouTrack MCP registration."
+fi
+{{- else }}
+# YouTrack MCP registration skipped (enableMcp = false)
+{{- end }}

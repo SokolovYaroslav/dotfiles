@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Remove zellij (not used in this setup). Runs once per machine; idempotent.
+set -euo pipefail
+
+if command -v brew >/dev/null 2>&1 && brew list --formula 2>/dev/null | grep -qx zellij; then
+  brew uninstall zellij || true
+fi
+rm -rf "$HOME/.config/zellij"
