@@ -1,16 +1,33 @@
 #!/usr/bin/env bash
 {{- if .enableJbProxy }}
-# JetBrains AI proxy (internal). Requires the `jbcentral` CLI; settings.json already
-# points apiKeyHelper/ANTHROPIC_BASE_URL at the proxy when enableJbProxy is true.
+# JetBrains AI proxy (internal). Requires the `jbcentral` CLI.
 set -euo pipefail
 
 if ! command -v jbcentral >/dev/null 2>&1; then
-  echo "jbcentral not found — install it per your internal docs, then run: jbcentral login"
+  case "$(uname -s)" in
+    Darwin|Linux)
+      echo "Installing jbcentral…"
+      curl -fsSL https://jetbrains-central-cli.s3.eu-west-1.amazonaws.com/jbcentral/stable/install.sh | bash
+      export PATH="$HOME/.local/bin:$PATH"   # install.sh drops the binary here
+      ;;
+    *)
+      echo "Install jbcentral for your OS (see https://central-cli.labs.jb.gg/docs), then re-run: chezmoi apply"
+      exit 0
+      ;;
+  esac
+fi
+
+if ! command -v jbcentral >/dev/null 2>&1; then
+  echo "jbcentral still not found after install — see https://central-cli.labs.jb.gg/docs, then re-run: chezmoi apply"
   exit 0
 fi
 
-# Ensure an authenticated proxy session.
+# Authenticate, then wire Claude Code to route through the local proxy. `jbcentral add`
+# writes `apiKeyHelper` + `env.ANTHROPIC_BASE_URL` (the per-machine wire) into
+# ~/.claude/settings.json itself — the modify_ settings script preserves those keys on
+# every future `chezmoi apply`, so we never have to ask for or store the wire URL.
 jbcentral login || true
+jbcentral add claude-code
 {{- else }}
 # JetBrains proxy setup skipped (enableJbProxy = false)
 {{- end }}

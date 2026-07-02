@@ -28,7 +28,7 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply <your-github-username>/dotf
 | `opVaultYT` | Vault holding the YouTrack token (item `YT Token`) |
 | `opVaultAnthropic` | Vault holding the Anthropic key (item `Anthropic API key dev`) |
 | `useOnePasswordSshAgent` | Route ssh-agent + git signing through 1Password |
-| `enableJbProxy` | Set up the JetBrains AI proxy via `jbcentral` (+ its `ANTHROPIC_BASE_URL`) |
+| `enableJbProxy` | Install + wire the JetBrains AI proxy: logs in and runs `jbcentral add claude-code`, which writes the per-machine proxy keys itself |
 | `installGh` | Install GitHub CLI and `gh auth login` |
 | `enableMcp` | Register the YouTrack MCP server for Claude Code |
 

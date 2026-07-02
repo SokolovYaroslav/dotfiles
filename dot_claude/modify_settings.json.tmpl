@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# chezmoi modify_ script: merge OUR managed Claude settings into the existing
+# ~/.claude/settings.json, PRESERVING keys written by other tools — notably the
+# `apiKeyHelper` and `env.ANTHROPIC_BASE_URL` that `jbcentral add claude-code` writes
+# (per-machine proxy wire). stdin = current target file (empty if none); stdout =
+# desired contents. Our keys win on conflict; anything else is kept as-is.
+set -euo pipefail
+
+current="$(cat)"
+[ -z "$current" ] && current='{}'
+
+managed='{
+  "env": {
+    "ENABLE_PROMPT_CACHING_1H": "1",
+    "ENABLE_TOOL_SEARCH": "true"
+  },
+  "model": "opus",
+  "statusLine": {
+    "type": "command",
+    "command": "bash {{ .chezmoi.homeDir }}/.claude/statusline-command.sh"
+  },
+  "alwaysThinkingEnabled": true,
+  "effortLevel": "high",
+  "theme": "dark",
+  "skipAutoPermissionPrompt": true
+}'
+
+if command -v jq >/dev/null 2>&1; then
+  # jq '*' recursively merges objects; the right operand (managed) wins on conflict.
+  jq -n --argjson cur "$current" --argjson mgd "$managed" '$cur * $mgd'
+else
+  current="$current" managed="$managed" python3 - <<'PY'
+import json, os
+cur = json.loads(os.environ["current"])
+mgd = json.loads(os.environ["managed"])
+def merge(a, b):
+    for k, v in b.items():
+        if isinstance(v, dict) and isinstance(a.get(k), dict):
+            merge(a[k], v)
+        else:
+            a[k] = v
+    return a
+print(json.dumps(merge(cur, mgd), indent=2))
+PY
+fi
