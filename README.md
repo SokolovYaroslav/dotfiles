@@ -25,8 +25,6 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply <your-github-username>/dotf
 | Prompt | Purpose |
 | --- | --- |
 | `opAccount` | Your 1Password account shorthand (e.g. `my.1password.com`) |
-| `opVaultYT` | Vault holding the YouTrack token (item `YT Token`) |
-| `opVaultAnthropic` | Vault holding the Anthropic key (item `Anthropic API key dev`) |
 | `useOnePasswordSshAgent` | Route ssh-agent + git signing through 1Password |
 | `enableJbProxy` | Install + wire the JetBrains AI proxy: logs in and runs `jbcentral add claude-code`, which writes the per-machine proxy keys itself |
 | `installGh` | Install GitHub CLI and `gh auth login` |
@@ -34,13 +32,17 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply <your-github-username>/dotf
 
 ## How secrets work
 
-- **On-demand shell functions** (`~/.zshenv`): `yt_token` / `yt_auth` read the YouTrack token
-  from 1Password only when called — a plain shell start never triggers a 1Password unlock.
+Items are looked up **by name** (`op item get '<item>' --account <opAccount> --fields
+credential`), so no vault names are committed — only the account you enter in the wizard. This
+assumes the item names are unique within that account.
+
+- **On-demand shell functions** (`~/.zshenv`): `yt_token` / `yt_auth` (YouTrack token) and
+  `anthropic_key` (Anthropic key) read from 1Password only when called — a plain shell start never
+  triggers a 1Password unlock.
 - **`claude()` wrapper** (`~/.zshenv`): when you launch Claude Code, it reads every entry in the
-  `CLAUDE_SECRETS` map from 1Password and injects them into Claude's subprocess env. The MCP
-  config references `${YOUTRACK_TOKEN}` — so no token is ever written to disk. Add a new secret by
-  appending one line to `CLAUDE_SECRETS`.
-- **`op://` templates** (`~/.config/op/secrets.env`): consumed via `op run --env-file`.
+  `CLAUDE_SECRETS` map (`ENV_VAR -> item name`) from 1Password and injects them into Claude's
+  subprocess env. The MCP config references `${YOUTRACK_TOKEN}` — so no token is ever written to
+  disk. Add a new secret by appending one line to `CLAUDE_SECRETS`.
 - **Commit signing**: via the 1Password SSH agent (`op-ssh-sign`), no local private key.
 
 ## Machine-specific overrides

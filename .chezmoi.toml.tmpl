@@ -1,7 +1,5 @@
 {{- /* Wizard prompts. Answers are stored in chezmoi's persistent state and asked only once. */ -}}
 {{- $opAccount := promptStringOnce . "opAccount" "1Password account shorthand (e.g. my.1password.com)" -}}
-{{- $opVaultYT := promptStringOnce . "opVaultYT" "1Password vault that holds the YouTrack token (item: 'YT Token')" -}}
-{{- $opVaultAnthropic := promptStringOnce . "opVaultAnthropic" "1Password vault that holds the Anthropic API key (item: 'Anthropic API key dev')" -}}
 {{- $useOpSsh := promptBoolOnce . "useOnePasswordSshAgent" "Use the 1Password SSH agent (also used for git commit signing)?" -}}
 {{- $enableJbProxy := promptBoolOnce . "enableJbProxy" "Install & wire the JetBrains AI proxy via jbcentral (installs, logs in, wires Claude Code)?" -}}
 {{- $installGh := promptBoolOnce . "installGh" "Install the GitHub CLI (gh) and run 'gh auth login'?" -}}
@@ -9,8 +7,6 @@
 
 [data]
     opAccount = {{ $opAccount | quote }}
-    opVaultYT = {{ $opVaultYT | quote }}
-    opVaultAnthropic = {{ $opVaultAnthropic | quote }}
     useOnePasswordSshAgent = {{ $useOpSsh }}
     enableJbProxy = {{ $enableJbProxy }}
     installGh = {{ $installGh }}
