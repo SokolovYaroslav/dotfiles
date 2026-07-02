@@ -1,1 +1,5 @@
 README.md
+
+# Claude accretes locally-approved permissions here — leave it unmanaged so
+# `chezmoi apply` never wipes them.
+.claude/settings.local.json
