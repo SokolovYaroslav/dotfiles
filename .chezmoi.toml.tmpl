@@ -1,7 +1,7 @@
 {{- /* Wizard prompts. Answers are stored in chezmoi's persistent state and asked only once. */ -}}
 {{- $opAccount := promptStringOnce . "opAccount" "1Password account shorthand (e.g. my.1password.com)" -}}
 {{- $useOpSsh := promptBoolOnce . "useOnePasswordSshAgent" "Use the 1Password SSH agent (also used for git commit signing)?" -}}
-{{- $enableJbProxy := promptBoolOnce . "enableJbProxy" "Install the JetBrains AI proxy CLI (central) and log in? Launch Claude through it with the 'ccr' alias." -}}
+{{- $enableJbProxy := promptBoolOnce . "enableJbProxy" "Install & wire the JetBrains AI proxy via central (installs, logs in, runs 'central add claude-code' to route Claude through it)?" -}}
 {{- $installGh := promptBoolOnce . "installGh" "Install the GitHub CLI (gh) and run 'gh auth login'?" -}}
 {{- $enableMcp := promptBoolOnce . "enableMcp" "Register the YouTrack MCP server for Claude Code?" -}}
 

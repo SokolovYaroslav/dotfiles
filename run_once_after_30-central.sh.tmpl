@@ -23,12 +23,13 @@ if ! command -v central >/dev/null 2>&1; then
   exit 0
 fi
 
-# Authenticate only. We deliberately do NOT bake the proxy into ~/.claude/settings.json
-# via `central add`; instead Claude is launched explicitly through the proxy with the
-# `ccr` shell function -> `central run claude-code` (see ~/.zshenv). Strip any stale
-# wiring left by a previous `central add` so plain `claude` stays direct.
+# Authenticate, then wire Claude Code to route through the proxy globally. `central add`
+# writes `apiKeyHelper` + `env.ANTHROPIC_BASE_URL` (the per-machine proxy wire) into
+# ~/.claude/settings.json itself — the modify_ settings script preserves those keys on
+# every future `chezmoi apply`, so we never have to ask for or store the wire URL. Every
+# `claude` launch then routes through the proxy with no extra flags.
 central login || true
-central remove claude-code >/dev/null 2>&1 || true
+central add claude-code
 {{- else }}
 # JetBrains proxy setup skipped (enableJbProxy = false)
 {{- end }}

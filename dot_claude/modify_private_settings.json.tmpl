@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 # chezmoi modify_ script: merge OUR managed Claude settings into the existing
-# ~/.claude/settings.json, PRESERVING keys written by other tools. We no longer wire
-# the proxy into settings.json (`central add`) — Claude is launched through the proxy
-# explicitly via the `ccr` shell function — but this still preserves any locally-added
-# keys (e.g. leftover `apiKeyHelper`/`env.ANTHROPIC_BASE_URL`). stdin = current target
-# file (empty if none); stdout = desired contents. Our keys win; anything else is kept.
+# ~/.claude/settings.json, PRESERVING keys written by other tools — notably the
+# `apiKeyHelper` and `env.ANTHROPIC_BASE_URL` that `central add claude-code` writes
+# (the per-machine proxy wire). stdin = current target file (empty if none); stdout =
+# desired contents. Our keys win on conflict; anything else is kept as-is.
 set -euo pipefail
 
 current="$(cat)"
