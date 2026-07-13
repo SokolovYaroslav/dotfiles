@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Install Claude Code if missing. Userspace installer drops the binary into
+# ~/.local/bin (on PATH via ~/.zshrc) — no brew, cross-platform. Must run before
+# 30-central and 40-mcp, which both need the `claude` binary.
+set -euo pipefail
+
+if ! command -v claude >/dev/null 2>&1 && [ ! -x "$HOME/.local/bin/claude" ]; then
+  echo "Installing Claude Code…"
+  curl -fsSL https://claude.ai/install.sh | bash
+fi

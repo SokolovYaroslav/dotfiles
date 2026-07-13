@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+{{- if .enableJbProxy }}
+# JetBrains AI proxy (internal). Requires the `central` CLI (formerly `jbcentral`;
+# that name lingers as a back-compat alias but `central` is canonical).
+set -euo pipefail
+
+if ! command -v central >/dev/null 2>&1 && [ ! -x "$HOME/.local/bin/central" ]; then
+  case "$(uname -s)" in
+    Darwin|Linux)
+      echo "Installing central…"
+      curl -fsSL https://jetbrains-central-cli.s3.eu-west-1.amazonaws.com/jbcentral/stable/install.sh | bash
+      ;;
+    *)
+      echo "Install central for your OS (see https://central-cli.labs.jb.gg/docs), then re-run: chezmoi apply"
+      exit 0
+      ;;
+  esac
+fi
+
+export PATH="$HOME/.local/bin:$PATH"   # install.sh drops the binary here
+if ! command -v central >/dev/null 2>&1; then
+  echo "central still not found after install — see https://central-cli.labs.jb.gg/docs, then re-run: chezmoi apply"
+  exit 0
+fi
+
+# Authenticate only. We deliberately do NOT bake the proxy into ~/.claude/settings.json
+# via `central add`; instead Claude is launched explicitly through the proxy with the
+# `ccr` shell function -> `central run claude-code` (see ~/.zshenv). Strip any stale
+# wiring left by a previous `central add` so plain `claude` stays direct.
+central login || true
+central remove claude-code >/dev/null 2>&1 || true
+{{- else }}
+# JetBrains proxy setup skipped (enableJbProxy = false)
+{{- end }}

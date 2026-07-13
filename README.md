@@ -7,17 +7,20 @@ collected by a one-time setup wizard and resolved from 1Password at runtime.
 
 ## Prerequisites
 
-1. **1Password CLI** — install and sign in first; all secret resolution depends on it:
-   ```sh
-   brew install 1password-cli   # or your platform's package
-   op signin
-   ```
-2. The 1Password desktop app (for the SSH agent + commit signing) if you opt into those.
+1. **1Password desktop app** — the only thing you must install by hand. Then, in
+   **Settings → Developer**, enable **both** toggles (they are independent):
+   - **Integrate with 1Password CLI** — lets `op` unlock via biometrics; without it the
+     `claude`/`ccr`/`yt_*` secret lookups silently return nothing.
+   - **Use the SSH agent** — populates the agent used for SSH and git commit signing.
+     Enabling only the CLI toggle will leave you with *no keys* in the agent.
+2. Everything else is installed by the bootstrap below: Homebrew (macOS only), the
+   1Password CLI (`op`), Claude Code, `gh`, and the `central` proxy CLI. On Linux the
+   `gh`/`op` installs use `apt` and will prompt for **sudo** once.
 
 ## Bootstrap a new machine
 
 ```sh
-sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply <your-github-username>/dotfiles
+sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply SokolovYaroslav/dotfiles
 ```
 
 `chezmoi init` runs a short wizard:
@@ -25,8 +28,8 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply <your-github-username>/dotf
 | Prompt | Purpose |
 | --- | --- |
 | `opAccount` | Your 1Password account shorthand (e.g. `my.1password.com`) |
-| `useOnePasswordSshAgent` | Route ssh-agent + git signing through 1Password |
-| `enableJbProxy` | Install + wire the JetBrains AI proxy: logs in and runs `jbcentral add claude-code`, which writes the per-machine proxy keys itself |
+| `useOnePasswordSshAgent` | Route ssh-agent + git signing through 1Password (also writes `~/.ssh/config` with the agent's `IdentityAgent`) |
+| `enableJbProxy` | Install the JetBrains AI proxy CLI (`central`) and log in. Claude is *not* wired into `settings.json`; launch it through the proxy explicitly with `ccr` (see below) |
 | `installGh` | Install GitHub CLI and `gh auth login` |
 | `enableMcp` | Register the YouTrack MCP server for Claude Code |
 
@@ -39,10 +42,13 @@ assumes the item names are unique within that account.
 - **On-demand shell functions** (`~/.zshenv`): `yt_token` / `yt_auth` (YouTrack token) and
   `anthropic_key` (Anthropic key) read from 1Password only when called — a plain shell start never
   triggers a 1Password unlock.
-- **`claude()` wrapper** (`~/.zshenv`): when you launch Claude Code, it reads every entry in the
-  `CLAUDE_SECRETS` map (`ENV_VAR -> item name`) from 1Password and injects them into Claude's
-  subprocess env. The MCP config references `${YOUTRACK_TOKEN}` — so no token is ever written to
-  disk. Add a new secret by appending one line to `CLAUDE_SECRETS`.
+- **`claude()` / `ccr()` wrappers** (`~/.zshenv`): both read every entry in the `CLAUDE_SECRETS`
+  map (`ENV_VAR -> item name`) from 1Password and inject them into Claude's subprocess env. The MCP
+  config references `${YOUTRACK_TOKEN}` — so no token is ever written to disk. Add a new secret by
+  appending one line to `CLAUDE_SECRETS`.
+  - `claude …` runs Claude Code **directly** (unproxied).
+  - `ccr …` runs it **through the JetBrains Central proxy** (`central run claude-code -- …`) — use
+    this when you want proxied/quota-metered requests.
 - **Commit signing**: via the 1Password SSH agent (`op-ssh-sign`), no local private key.
 
 ## Machine-specific overrides

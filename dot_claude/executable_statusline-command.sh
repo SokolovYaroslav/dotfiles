@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 # Claude Code statusline: session/monthly-left | model | context% | git branch
-# The JetBrains quota segment self-disables if `jbcentral` is not installed.
+# The JetBrains quota segment self-disables if `central` is not installed.
 
 input=$(cat)
+
+# Ensure user-local + brew bins are visible even under a minimal (e.g. GUI) launch
+# env, so `central`/`jq` resolve regardless of how Claude Code was started.
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 cost=$(echo "$input" | jq -r '.cost.total_cost_usd // empty')
 model=$(echo "$input" | jq -r '.model.display_name // empty')
@@ -31,8 +35,8 @@ now=$(date +%s)
 
 refresh_quota() {
   local out r
-  command -v jbcentral >/dev/null 2>&1 || return
-  out=$(jbcentral quota 2>/dev/null) || return
+  command -v central >/dev/null 2>&1 || return
+  out=$(central quota 2>/dev/null) || return
   r=$(printf '%s\n' "$out" | grep -oE 'Remaining:[[:space:]]*\$[0-9.]+' | grep -oE '[0-9.]+' | head -1)
   [ -n "$r" ] && printf '%s %s\n' "$(date +%s)" "$r" > "$CACHE"
 }
@@ -42,7 +46,7 @@ if [ -f "$CACHE" ]; then
   ts=$(cut -d' ' -f1 "$CACHE" 2>/dev/null)
   [ -n "$ts" ] && [ $((now - ts)) -lt "$TTL" ] && need_refresh=0
 fi
-if [ "$need_refresh" = 1 ] && command -v jbcentral >/dev/null 2>&1; then
+if [ "$need_refresh" = 1 ] && command -v central >/dev/null 2>&1; then
   ( refresh_quota ) >/dev/null 2>&1 &
   disown 2>/dev/null
 fi

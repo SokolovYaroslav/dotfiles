@@ -9,6 +9,11 @@ plugins=(git zsh-autosuggestions)
 
 source $ZSH/oh-my-zsh.sh
 
+# Show the full path (~/-abbreviated) in the prompt instead of just the current
+# directory's last component. robbyrussell uses %c; swap it for %~ post-source so
+# the (externally-managed) theme file stays untouched.
+PROMPT=${PROMPT//"%c"/"%~"}
+
 # User configuration
 
 export PATH="$HOME/bin:$PATH"

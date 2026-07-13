@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+{{- if eq .chezmoi.os "darwin" }}
+# Install Homebrew if missing (macOS only — we never install brew on Linux; there
+# gh/op come from apt). Runs BEFORE file application and every run_once_after script,
+# so the later brew-based installers can find it.
+set -euo pipefail
+
+if ! command -v brew >/dev/null 2>&1 \
+   && [ ! -x /opt/homebrew/bin/brew ] && [ ! -x /usr/local/bin/brew ]; then
+  echo "Installing Homebrew…"
+  NONINTERACTIVE=1 /bin/bash -c \
+    "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+fi
+{{- else }}
+# Homebrew intentionally not used on Linux — no-op.
+{{- end }}

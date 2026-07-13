@@ -37,5 +37,22 @@ claude() {
   env "${_inject[@]}" claude "$@"
 }
 
+# Same secret injection, but route Claude Code explicitly through the JetBrains
+# Central proxy: `ccr` == "claude central run". Args pass through after `--`.
+# Plain `claude` stays direct (unproxied); use `ccr` when you want the proxy.
+ccr() {
+  local -a _inject
+  local _var _item _val
+  for _var _item in "${(@kv)CLAUDE_SECRETS}"; do
+    _val="$(op item get "$_item" --account {{ .opAccount }} --fields label=credential --reveal 2>/dev/null)"
+    if [[ -z "$_val" ]]; then
+      print -u2 "ccr: failed to read $_var from 1Password (item: $_item)"
+      return 1
+    fi
+    _inject+=("$_var=$_val")
+  done
+  env "${_inject[@]}" central run claude-code -- "$@"
+}
+
 # Machine-specific overrides (not tracked by chezmoi).
 [ -f "$HOME/.zshenv.local" ] && source "$HOME/.zshenv.local"

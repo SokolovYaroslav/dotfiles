@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Install the 1Password CLI (op) if missing. All secret resolution (yt_token,
+# anthropic_key, the claude()/ccr() secret injection) depends on it. Installing the
+# binary is not enough on its own — you must also toggle "Integrate with 1Password
+# CLI" in the desktop app (Settings → Developer) for biometric unlock. See README.
+set -euo pipefail
+
+if command -v op >/dev/null 2>&1; then
+  exit 0
+fi
+
+{{- if eq .chezmoi.os "darwin" }}
+if [ -x /opt/homebrew/bin/brew ]; then eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [ -x /usr/local/bin/brew ]; then eval "$(/usr/local/bin/brew shellenv)"; fi
+
+if command -v brew >/dev/null 2>&1; then
+  brew install 1password-cli
+else
+  echo "op not found and Homebrew unavailable — install it manually, then re-run: chezmoi apply"
+fi
+{{- else }}
+if command -v apt-get >/dev/null 2>&1; then
+  # Official 1Password apt repo (needs sudo). https://developer.1password.com/docs/cli/get-started
+  echo "Installing 1Password CLI via apt (needs sudo)…"
+  arch="$(dpkg --print-architecture)"
+  curl -sS https://downloads.1password.com/linux/keys/1password.asc \
+    | sudo gpg --yes --dearmor --output /usr/share/keyrings/1password-archive-keyring.gpg
+  echo "deb [arch=${arch} signed-by=/usr/share/keyrings/1password-archive-keyring.gpg] https://downloads.1password.com/linux/debian/${arch} stable main" \
+    | sudo tee /etc/apt/sources.list.d/1password.list >/dev/null
+  sudo mkdir -p /etc/debsig/policies/AC2D62742012EA22/
+  curl -sS https://downloads.1password.com/linux/debian/debsig/1password.pol \
+    | sudo tee /etc/debsig/policies/AC2D62742012EA22/1password.pol >/dev/null
+  sudo mkdir -p /usr/share/debsig/keyrings/AC2D62742012EA22
+  curl -sS https://downloads.1password.com/linux/keys/1password.asc \
+    | sudo gpg --yes --dearmor --output /usr/share/debsig/keyrings/AC2D62742012EA22/debsig.gpg
+  sudo apt-get update && sudo apt-get install -y 1password-cli
+else
+  echo "op not found and apt unavailable — install the 1Password CLI for your distro, then re-run: chezmoi apply"
+fi
+{{- end }}

@@ -1,0 +1,12 @@
+{{- if .useOnePasswordSshAgent -}}
+# Route SSH auth through the 1Password SSH agent (keys live in 1Password, not on disk).
+# Requires "Use the SSH agent" enabled in the 1Password app (Settings → Developer).
+Host *
+{{- if eq .chezmoi.os "darwin" }}
+	IdentityAgent "~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
+{{- else }}
+	IdentityAgent "~/.1password/agent.sock"
+{{- end }}
+{{- else -}}
+# 1Password SSH agent not enabled (useOnePasswordSshAgent = false).
+{{- end }}
