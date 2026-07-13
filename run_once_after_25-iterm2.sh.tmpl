@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+{{- if eq .chezmoi.os "darwin" }}
+# Point iTerm2 at the chezmoi-tracked prefs folder (~/.config/iterm2), so the
+# plist managed in this repo is what iTerm2 loads. The plist itself lives at
+# dot_config/iterm2/com.googlecode.iterm2.plist.
+set -euo pipefail
+
+PREFS_DIR="$HOME/.config/iterm2"
+
+# Setting these via `defaults write` while iTerm2 is running is unsafe: on quit
+# iTerm2 flushes its in-memory prefs and clobbers the change. Only write when
+# it isn't running; otherwise tell the user to flip the toggle in-app.
+if pgrep -xq iTerm2; then
+  echo "iTerm2 is running — not touching its prefs to avoid a write race."
+  echo "Enable it in-app: Settings → General → Settings →"
+  echo "  ‘Load preferences from a custom folder or URL’ → $PREFS_DIR"
+  echo "  and set ‘Save changes’ to ‘Automatically’."
+else
+  defaults write com.googlecode.iterm2 PrefsCustomFolder -string "$PREFS_DIR"
+  defaults write com.googlecode.iterm2 LoadPrefsFromCustomFolder -bool true
+  echo "iTerm2 set to load prefs from $PREFS_DIR (takes effect on next launch)."
+fi
+{{- else }}
+# iTerm2 is macOS-only — nothing to do here.
+{{- end }}
