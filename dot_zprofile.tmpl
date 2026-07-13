@@ -15,4 +15,6 @@ fi
 
 # Machine-specific overrides (not tracked by chezmoi). Put host-only login-shell
 # setup (e.g. language framework PATHs) here.
-[ -f "$HOME/.zprofile.local" ] && source "$HOME/.zprofile.local"
+if [ -f "$HOME/.zprofile.local" ]; then
+    source "$HOME/.zprofile.local"
+fi

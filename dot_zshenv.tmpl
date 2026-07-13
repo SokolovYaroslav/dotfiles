@@ -1,5 +1,7 @@
 # Rust/Cargo env, if present.
-[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+if [ -f "$HOME/.cargo/env" ]; then
+    . "$HOME/.cargo/env"
+fi
 
 # YouTrack REST API. The token lives in 1Password and is resolved ON DEMAND,
 # never at shell init (so a plain shell start does not trigger an op unlock)
@@ -55,4 +57,6 @@ ccr() {
 }
 
 # Machine-specific overrides (not tracked by chezmoi).
-[ -f "$HOME/.zshenv.local" ] && source "$HOME/.zshenv.local"
+if [ -f "$HOME/.zshenv.local" ]; then
+    source "$HOME/.zshenv.local"
+fi
