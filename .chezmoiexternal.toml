@@ -11,3 +11,15 @@
     url = "https://github.com/zsh-users/zsh-autosuggestions/archive/refs/heads/master.tar.gz"
     stripComponents = 1
     refreshPeriod = "168h"
+{{- if .installSkills }}
+
+# Private global Claude Code skills, pulled from a separate repo (cloned via SSH, so
+# the 1Password agent authenticates). The URL comes from the wizard, so no private
+# repo path is committed to this public repo.
+[".claude/skills"]
+    type = "git-repo"
+    url = {{ .skillsRepo | quote }}
+    refreshPeriod = "168h"
+    [".claude/skills".pull]
+        args = ["--ff-only"]
+{{- end }}
