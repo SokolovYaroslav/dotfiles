@@ -50,11 +50,14 @@ assumes the item names are unique within that account.
 - **On-demand shell functions** (`~/.zshenv`): `yt_token` / `yt_auth` (YouTrack token) and
   `anthropic_key` (Anthropic key) read from 1Password only when called — a plain shell start never
   triggers a 1Password unlock.
-- **`claude()` wrapper** (`~/.zshenv`): when you launch Claude Code, it reads every entry in the
-  `CLAUDE_SECRETS` map (`ENV_VAR -> item name`) from 1Password and injects them into Claude's
-  subprocess env. The MCP config references `${YOUTRACK_TOKEN}` — so no token is ever written to
-  disk. Add a new secret by appending one line to `CLAUDE_SECRETS`. (Proxy routing is handled
-  transparently by the `apiKeyHelper` wire that `central add` baked into `settings.json`.)
+- **Self-authorizing MCP servers** (`run_onchange_after_40-mcp.sh.tmpl`): MCP servers that need a
+  secret are registered so they resolve it themselves. The YouTrack server runs as a stdio bridge
+  — `op run` resolves the token from 1Password (biometric) into the subprocess env, `sh` builds the
+  `Authorization` header, and `mcp-proxy` (via `uvx`, no Node) forwards to the remote endpoint.
+  Because Claude spawns this itself, it works no matter how `claude` was launched — terminal or the
+  IDE Agent Workbench — with no launch-time env injection and no token on disk. Add a secret-bearing
+  server by registering it the same way. (Proxy routing for the model API is handled transparently
+  by the `apiKeyHelper` wire that `central add` baked into `settings.json`.)
 - **Commit signing**: via the 1Password SSH agent (`op-ssh-sign`), no local private key.
 
 ## Machine-specific overrides

@@ -15,31 +15,12 @@ yt_auth()  { export YOUTRACK_TOKEN="${YOUTRACK_TOKEN:-$(yt_token)}"; }
 # Anthropic API key on demand (field 'credential' of the 'Anthropic API key dev' item).
 anthropic_key() { op item get 'Anthropic API key dev' --account {{ .opAccount }} --fields label=credential --reveal 2>/dev/null; }
 
-# Launch Claude Code with required secrets injected into its environment, resolved
-# from 1Password ON DEMAND at launch (op unlock happens here, not on plain shell
-# start). Secrets live only in Claude's subprocess env, never on disk — the MCP
-# config references them as ${VAR}. The map is ENV_VAR -> 1Password item name; the
-# 'credential' field is read from each item. Add a secret with one line below.
-#   e.g. CLAUDE_SECRETS[SOME_TOKEN]='Some Item Name'
-typeset -gA CLAUDE_SECRETS=(
-  YOUTRACK_TOKEN 'YT Token'
-)
-claude() {
-  local -a _inject
-  local _var _item _val
-  for _var _item in "${(@kv)CLAUDE_SECRETS}"; do
-    _val="$(op item get "$_item" --account {{ .opAccount }} --fields label=credential --reveal 2>/dev/null)"
-    if [[ -z "$_val" ]]; then
-      print -u2 "claude: failed to read $_var from 1Password (item: $_item)"
-      return 1
-    fi
-    _inject+=("$_var=$_val")
-  done
-  # `env` exec's the real `claude` binary via PATH — it never re-enters this function.
-  # The proxy wire is baked into ~/.claude/settings.json by `central add claude-code`,
-  # so this direct launch still routes through the JetBrains Central proxy.
-  env "${_inject[@]}" claude "$@"
-}
+# Claude Code needs no secret injection at launch: MCP servers that require secrets are
+# registered as self-authorizing (they resolve from 1Password via `op run` when Claude
+# spawns them — see run_onchange_after_40-mcp.sh.tmpl). So `claude` is invoked as the
+# plain binary, which also means it behaves identically when launched from the IDE's
+# Agent Workbench rather than this shell. Proxy routing is baked into
+# ~/.claude/settings.json by `central add claude-code`.
 
 # Machine-specific overrides (not tracked by chezmoi).
 if [ -f "$HOME/.zshenv.local" ]; then

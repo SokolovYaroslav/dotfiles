@@ -1,14 +1,21 @@
 #!/usr/bin/env bash
 {{- if .enableMcp }}
-# Register the YouTrack MCP server at user scope. The Authorization header references
-# ${YOUTRACK_TOKEN} literally — Claude expands it at runtime from the env that the
-# claude() wrapper (see ~/.zshenv) injects from 1Password. No token is stored on disk.
+# Register the YouTrack MCP server at user scope as a SELF-AUTHORIZING stdio server:
+# Claude spawns `op run`, which resolves the token from 1Password (biometric) into the
+# subprocess env; `sh` builds the Bearer header from it; `mcp-proxy` (via uvx, no Node)
+# bridges to the remote streamable-HTTP endpoint. Because Claude spawns this itself, it
+# works regardless of how `claude` was launched (terminal or the IDE Agent Workbench) —
+# no launch-time env injection needed. The token is never stored on disk. Note the bare
+# $YOUTRACK_TOKEN (no braces): Claude only expands ${VAR}, so the shell inside `op run`
+# is what resolves it — Claude leaves it untouched.
 set -euo pipefail
 
 if command -v claude >/dev/null 2>&1; then
   claude mcp remove youtrack -s user >/dev/null 2>&1 || true
-  claude mcp add --scope user --transport http youtrack https://youtrack.jetbrains.com/mcp \
-    --header 'Authorization: Bearer ${YOUTRACK_TOKEN}'
+  claude mcp add --scope user youtrack \
+    --env OP_ACCOUNT={{ .opAccount }} \
+    --env 'YOUTRACK_TOKEN=op://Private/YT Token/credential' \
+    -- op run --no-masking -- sh -c 'exec uvx mcp-proxy@0.12.0 --transport streamablehttp --headers Authorization "Bearer $YOUTRACK_TOKEN" https://youtrack.jetbrains.com/mcp'
 else
   echo "claude CLI not found — skipping YouTrack MCP registration."
 fi
