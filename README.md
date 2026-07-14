@@ -32,14 +32,15 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply SokolovYaroslav/dotfiles
 | `enableJbProxy` | Install + wire the JetBrains AI proxy: logs in and runs `central add claude-code`, which writes the per-machine proxy keys into `settings.json` itself so every `claude` launch routes through it |
 | `installGh` | Install GitHub CLI and `gh auth login` |
 | `enableMcp` | Register the YouTrack MCP server for Claude Code |
-| `installSkills` | Pull global Claude Code skills into `~/.claude/skills` from a separate private git repo (prompts for its URL) |
+| `installSkills` | Pull global Claude Code skills into `~/.claude/skills` from my private `claude-skills` repo |
 
 ## Global Claude Code skills
 
 Personal skills live in a **separate private repo** (they encode internal workflow, so they
 don't belong in this public one). When `installSkills` is enabled, chezmoi pulls that repo into
 `~/.claude/skills` as a git-repo external, cloned over SSH — so the 1Password SSH agent handles
-auth and the private repo URL is supplied by the wizard rather than committed here.
+auth. The repo URL is hardcoded in `.chezmoiexternal.toml`; that's harmless since cloning it
+still requires access to the private repo.
 
 ## How secrets work
 

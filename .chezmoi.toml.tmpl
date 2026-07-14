@@ -4,11 +4,7 @@
 {{- $enableJbProxy := promptBoolOnce . "enableJbProxy" "Install & wire the JetBrains AI proxy via central (installs, logs in, runs 'central add claude-code' to route Claude through it)?" -}}
 {{- $installGh := promptBoolOnce . "installGh" "Install the GitHub CLI (gh) and run 'gh auth login'?" -}}
 {{- $enableMcp := promptBoolOnce . "enableMcp" "Register the YouTrack MCP server for Claude Code?" -}}
-{{- $installSkills := promptBoolOnce . "installSkills" "Install my private global Claude Code skills (from a separate private git repo)?" -}}
-{{- $skillsRepo := "" -}}
-{{- if $installSkills -}}
-{{-   $skillsRepo = promptStringOnce . "skillsRepo" "Git URL of the private skills repo (e.g. git@github.com:you/claude-skills.git)" -}}
-{{- end -}}
+{{- $installSkills := promptBoolOnce . "installSkills" "Install my global Claude Code skills (from my private claude-skills repo)?" -}}
 
 [data]
     opAccount = {{ $opAccount | quote }}
@@ -17,4 +13,3 @@
     installGh = {{ $installGh }}
     enableMcp = {{ $enableMcp }}
     installSkills = {{ $installSkills }}
-    skillsRepo = {{ $skillsRepo | quote }}

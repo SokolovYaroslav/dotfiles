@@ -14,11 +14,11 @@
 {{- if .installSkills }}
 
 # Private global Claude Code skills, pulled from a separate repo (cloned via SSH, so
-# the 1Password agent authenticates). The URL comes from the wizard, so no private
-# repo path is committed to this public repo.
+# the 1Password agent authenticates). Access still requires being able to clone the
+# private repo, so hardcoding the URL here leaks nothing exploitable.
 [".claude/skills"]
     type = "git-repo"
-    url = {{ .skillsRepo | quote }}
+    url = "git@github.com:SokolovYaroslav/claude-skills.git"
     refreshPeriod = "168h"
     [".claude/skills".pull]
         args = ["--ff-only"]
