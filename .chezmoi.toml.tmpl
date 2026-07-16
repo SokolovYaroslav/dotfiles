@@ -5,6 +5,7 @@
 {{- $installGh := promptBoolOnce . "installGh" "Install the GitHub CLI (gh) and run 'gh auth login'?" -}}
 {{- $enableMcp := promptBoolOnce . "enableMcp" "Register the YouTrack MCP server for Claude Code?" -}}
 {{- $installSkills := promptBoolOnce . "installSkills" "Install my global Claude Code skills (from my private claude-skills repo)?" -}}
+{{- $installAuthorizedKeys := promptBoolOnce . "installAuthorizedKeys" "Provision ~/.ssh/authorized_keys from 1Password so this machine accepts SSH logins with your key?" -}}
 
 [data]
     opAccount = {{ $opAccount | quote }}
@@ -13,3 +14,4 @@
     installGh = {{ $installGh }}
     enableMcp = {{ $enableMcp }}
     installSkills = {{ $installSkills }}
+    installAuthorizedKeys = {{ $installAuthorizedKeys }}

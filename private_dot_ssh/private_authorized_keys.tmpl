@@ -1,0 +1,5 @@
+{{- /* Only provisioned on machines that opted in (installAuthorizedKeys). */ -}}
+{{- /* When false, this template renders empty and chezmoi removes the target file. */ -}}
+{{- if dig "installAuthorizedKeys" false . -}}
+{{ onepasswordRead "op://Employee/ssh_key/public key" .opAccount }}
+{{ end -}}
