@@ -26,3 +26,7 @@ anthropic_key() { op item get 'Anthropic API key dev' --account {{ .opAccount }}
 if [ -f "$HOME/.zshenv.local" ]; then
     source "$HOME/.zshenv.local"
 fi
+
+# Langfuse agent tracing (personal opt-in; overrides agent/app/.env under uv run --env-file)
+export LANGFUSE_TRACING=true
+export LANGFUSE_TRACING_ENVIRONMENT=yas
