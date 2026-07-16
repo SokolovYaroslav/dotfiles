@@ -37,6 +37,34 @@ fi
 unset _op_ssh_sock
 {{- end }}
 
+{{ if eq .chezmoi.os "darwin" -}}
+# awake — toggle a caffeinate assertion to keep this Mac from sleeping.
+#   awake   turn on (stay awake indefinitely), or off if already on
+# Tracks only the process it starts (via a PID file), so toggling off never kills
+# caffeinate assertions started elsewhere (e.g. `caffeinate -di make`). When
+# turning off, it warns if any *other* caffeinate is still holding the Mac awake.
+awake() {
+    local pidfile="${TMPDIR:-/tmp}/awake.caffeinate.pid"
+    local pid
+    pid=$(cat "$pidfile" 2>/dev/null)
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+        kill "$pid" 2>/dev/null
+        rm -f "$pidfile"
+        echo "☕ awake off — sleep re-enabled"
+        local others
+        others=$(pgrep -x caffeinate 2>/dev/null | grep -v "^${pid}$" | tr '\n' ' ')
+        if [ -n "${others// /}" ]; then
+            echo "⚠️  other caffeinate still keeping the Mac awake (pid ${others% })"
+            echo "    inspect: pmset -g assertions   ·   reset all: pkill caffeinate"
+        fi
+    else
+        rm -f "$pidfile"
+        caffeinate -dimsu &
+        echo "$!" > "$pidfile"
+        echo "☕ awake on — staying awake (pid $!)"
+    fi
+}
+{{ end -}}
 # Machine-specific overrides (not tracked by chezmoi). Put host-only PATH entries
 # (e.g. TinyTeX, language frameworks) here. Use a full if-block (not `&& source`)
 # so a missing file leaves $? at 0 — otherwise the failed test makes every fresh
