@@ -28,38 +28,61 @@ else
 fi
 
 # ---- JetBrains Central quota (cached, stale-while-revalidate) ----
-CACHE="$HOME/.claude/.jb-quota-cache"  # epoch used remaining
-TTL=120
+CACHE="$HOME/.claude/.jb-quota-cache"  # epoch remaining
+TTL=120       # refresh in the background once the cache is older than this
+MAX_AGE=1800  # past this, mark the value stale (*) instead of pretending it's live
 
 now=$(date +%s)
 
 refresh_quota() {
-  local out r
+  local out line r
   command -v central >/dev/null 2>&1 || return
-  out=$(central quota 2>/dev/null) || return
-  r=$(printf '%s\n' "$out" | grep -oE 'Remaining:[[:space:]]*\$[0-9.]+' | grep -oE '[0-9.]+' | head -1)
-  [ -n "$r" ] && printf '%s %s\n' "$(date +%s)" "$r" > "$CACHE"
+  # Prefer --json: the field names are a stable contract, while the pretty
+  # output is not -- a "Remaining: $1322.58" -> "Remaining: 1718.81 credits"
+  # rewording is what silently froze this segment for a month.
+  r=$(central quota --json 2>/dev/null \
+      | jq -r '.tariffQuota.available // (.maxDollars|tonumber) - (.usedDollars|tonumber) // empty' \
+        2>/dev/null)
+  # Fall back to scraping, for a `central` too old to know --json. Accepts both
+  # wordings, with or without thousands separators.
+  if [ -z "$r" ] || [ "$r" = null ]; then
+    out=$(central quota 2>/dev/null) || return
+    line=$(printf '%s\n' "$out" | grep -E '^[[:space:]]*Remaining:' | head -1)
+    [ -n "$line" ] || return
+    r=$(printf '%s\n' "$line" | grep -oE '[0-9][0-9,]*(\.[0-9]+)?' | head -1 | tr -d ',')
+  fi
+  [ -n "$r" ] || return
+  printf '%s %s\n' "$(date +%s)" "$r" > "$CACHE"
 }
 
-need_refresh=1
+cache_age=""
 if [ -f "$CACHE" ]; then
   ts=$(cut -d' ' -f1 "$CACHE" 2>/dev/null)
-  [ -n "$ts" ] && [ $((now - ts)) -lt "$TTL" ] && need_refresh=0
+  case "$ts" in
+    ''|*[!0-9]*) ;;
+    *) cache_age=$((now - ts)) ;;
+  esac
 fi
-if [ "$need_refresh" = 1 ] && command -v central >/dev/null 2>&1; then
+
+if { [ -z "$cache_age" ] || [ "$cache_age" -ge "$TTL" ]; } \
+   && command -v central >/dev/null 2>&1; then
   ( refresh_quota ) >/dev/null 2>&1 &
   disown 2>/dev/null
 fi
 
 jb_remaining=""
-if [ -f "$CACHE" ]; then
+if [ -n "$cache_age" ]; then
   jb_remaining=$(cut -d' ' -f2 "$CACHE" 2>/dev/null)
 fi
 
-# Combine session cost with monthly remaining: {session .2f} / {left .0f}
+# Combine session cost with monthly remaining: {session .2f} / {left .0f}.
+# A trailing * means the quota figure could not be refreshed and may be out of
+# date -- without it a broken `central quota` parse looks like a live number.
 if [ -n "$jb_remaining" ]; then
-  cost_str=$(awk -v c="${cost:-0}" -v r="$jb_remaining" \
-    'BEGIN{printf "$%.2f / $%.0f", c, r}')
+  stale=""
+  [ "$cache_age" -gt "$MAX_AGE" ] && stale="*"
+  cost_str=$(awk -v c="${cost:-0}" -v r="$jb_remaining" -v s="$stale" \
+    'BEGIN{printf "$%.2f / $%.0f%s", c, r, s}')
 fi
 
 # Git branch (skip lock, suppress errors)
