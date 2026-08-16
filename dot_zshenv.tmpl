@@ -3,24 +3,23 @@ if [ -f "$HOME/.cargo/env" ]; then
     . "$HOME/.cargo/env"
 fi
 
-# YouTrack REST API. The token lives in 1Password and is resolved ON DEMAND,
-# never at shell init (so a plain shell start does not trigger an op unlock)
-# and never stored on disk.
-#   yt_token  -> prints the token (resolves from 1Password each call)
-#   yt_auth   -> exports YOUTRACK_TOKEN for the current shell (caches it)
+# YouTrack REST API base URL. Not a secret, so it is set unconditionally. There is
+# deliberately no token here: the YouTrack MCP server authenticates over OAuth (see
+# run_onchange_after_40-mcp.sh.tmpl), and ad-hoc REST calls can pull a token when they
+# actually need one with `op item get 'YT Token' --reveal`.
 export YOUTRACK_BASE_URL="https://youtrack.jetbrains.com"
-yt_token() { op item get 'YT Token' --account {{ .opAccount }} --fields label=credential --reveal 2>/dev/null; }
-yt_auth()  { export YOUTRACK_TOKEN="${YOUTRACK_TOKEN:-$(yt_token)}"; }
 
-# Anthropic API key on demand (field 'credential' of the 'Anthropic API key dev' item).
-anthropic_key() { op item get 'Anthropic API key dev' --account {{ .opAccount }} --fields label=credential --reveal 2>/dev/null; }
-
-# Claude Code needs no secret injection at launch: MCP servers that require secrets are
-# registered as self-authorizing (they resolve from 1Password via `op run` when Claude
-# spawns them — see run_onchange_after_40-mcp.sh.tmpl). So `claude` is invoked as the
-# plain binary, which also means it behaves identically when launched from the IDE's
-# Agent Workbench rather than this shell. Proxy routing is baked into
-# ~/.claude/settings.json by `central add claude-code`.
+# No secrets are resolved from 1Password at any point in the shell. This file used to
+# define yt_token / yt_auth / anthropic_key wrappers around `op item get`; they were
+# dropped because nothing referenced them and every `op` call risks a biometric prompt
+# that only a human at the keyboard can answer.
+#
+# Claude Code needs no secret injection at launch either: the YouTrack MCP server is a
+# plain HTTP server that authorizes over OAuth and keeps its tokens in Claude's own
+# credential store. So `claude` is invoked as the plain binary, and behaves identically
+# whether it is launched from this shell, the IDE's Agent Workbench, or an unattended
+# batch run. Proxy routing is baked into ~/.claude/settings.json by `central add
+# claude-code`.
 
 # Machine-specific overrides (not tracked by chezmoi).
 if [ -f "$HOME/.zshenv.local" ]; then

@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Install the 1Password CLI (op) if missing. All secret resolution (yt_token,
-# anthropic_key, the claude() secret injection) depends on it. Installing the
-# binary is not enough on its own — you must also toggle "Integrate with 1Password
-# CLI" in the desktop app (Settings → Developer) for biometric unlock. See README.
+# Install the 1Password CLI (op) if missing. Still needed for the remaining secret
+# resolution — provisioning ~/.ssh/authorized_keys, the SSH agent, commit signing, and
+# ad-hoc `op item get` calls — even though Claude Code no longer goes through it.
+# Installing the binary is not enough on its own — you must also toggle "Integrate with
+# 1Password CLI" in the desktop app (Settings → Developer) for biometric unlock. See README.
 set -euo pipefail
 
 if command -v op >/dev/null 2>&1; then

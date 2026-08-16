@@ -48,17 +48,23 @@ Items are looked up **by name** (`op item get '<item>' --account <opAccount> --f
 credential`), so no vault names are committed — only the account you enter in the wizard. This
 assumes the item names are unique within that account.
 
-- **On-demand shell functions** (`~/.zshenv`): `yt_token` / `yt_auth` (YouTrack token) and
-  `anthropic_key` (Anthropic key) read from 1Password only when called — a plain shell start never
-  triggers a 1Password unlock.
-- **Self-authorizing MCP servers** (`run_onchange_after_40-mcp.sh.tmpl`): MCP servers that need a
-  secret are registered so they resolve it themselves. The YouTrack server runs as a stdio bridge
-  — `op run` resolves the token from 1Password (biometric) into the subprocess env, `sh` builds the
-  `Authorization` header, and `mcp-proxy` (via `uvx`, no Node) forwards to the remote endpoint.
-  Because Claude spawns this itself, it works no matter how `claude` was launched — terminal or the
-  IDE Agent Workbench — with no launch-time env injection and no token on disk. Add a secret-bearing
-  server by registering it the same way. (Proxy routing for the model API is handled transparently
-  by the `apiKeyHelper` wire that `central add` baked into `settings.json`.)
+- **Nothing in the shell** (`~/.zshenv`): no secret is resolved at shell init or by any helper
+  function. Earlier versions defined `yt_token` / `yt_auth` / `anthropic_key` wrappers around
+  `op item get`; they were removed once nothing referenced them.
+- **OAuth for MCP, not tokens** (`run_onchange_after_40-mcp.sh.tmpl`): the YouTrack server is
+  registered as a plain HTTP server and authorizes over OAuth 2.1. Claude Code identifies itself
+  with a Client ID Metadata Document (YouTrack supports CIMD but not Dynamic Client Registration),
+  so setup is one browser sign-in per machine — `claude mcp login youtrack` — after which Claude
+  keeps and silently refreshes the tokens in its own credential store. Nothing is stored in
+  `~/.claude.json`, and no permanent YouTrack token exists to leak.
+
+  This replaced a stdio bridge that resolved a permanent token via `op run` at spawn time. It was
+  correct on paper — nothing on disk, works however `claude` was launched — but it made every MCP
+  connection depend on the 1Password desktop app being unlocked right then. Unattended runs hit a
+  biometric prompt with nobody to answer it and failed on Claude's 30s connect timeout. Prefer
+  OAuth for any remote MCP server that offers it; fall back to a secret only when it doesn't.
+  (Proxy routing for the model API is handled transparently by the `apiKeyHelper` wire that
+  `central add` baked into `settings.json`.)
 - **Commit signing**: via the 1Password SSH agent (`op-ssh-sign`), no local private key.
 
 ## Machine-specific overrides
