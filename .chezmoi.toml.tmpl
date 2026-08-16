@@ -7,6 +7,17 @@
 {{- $installSkills := promptBoolOnce . "installSkills" "Install my global Claude Code skills (from my private claude-skills repo)?" -}}
 {{- $installAuthorizedKeys := promptBoolOnce . "installAuthorizedKeys" "Provision ~/.ssh/authorized_keys from 1Password so this machine accepts SSH logins with your key?" -}}
 
+{{/* oh-my-zsh and zsh-autosuggestions are archive externals on a weekly refresh.
+     Every refresh reports dozens of upstream file changes that are never ours to
+     review, which buries our own drift in noise. Hide externals from status and
+     diff so those commands only report what we actually manage; `chezmoi apply`
+     still refreshes them as before. To look on purpose: --exclude=none. */}}
+[status]
+    exclude = ["externals"]
+
+[diff]
+    exclude = ["externals"]
+
 [data]
     opAccount = {{ $opAccount | quote }}
     useOnePasswordSshAgent = {{ $useOpSsh }}
