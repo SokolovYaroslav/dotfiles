@@ -2,7 +2,11 @@
 {{- if eq .chezmoi.os "darwin" }}
 # Point iTerm2 at the chezmoi-tracked prefs folder (~/.config/iterm2), so the
 # plist managed in this repo is what iTerm2 loads. The plist itself lives at
-# dot_config/iterm2/com.googlecode.iterm2.plist.
+# dot_config/iterm2/create_com.googlecode.iterm2.plist — `create_` so chezmoi
+# seeds it on a fresh machine and then never rewrites it. iTerm2 saves changes
+# automatically into that folder, so the live file always drifts (it also dumps
+# inherited Apple* NSUserDefaults into it); tracking it strictly would mean
+# endless `chezmoi status` noise and apply clobbering the running app's prefs.
 set -euo pipefail
 
 PREFS_DIR="$HOME/.config/iterm2"
