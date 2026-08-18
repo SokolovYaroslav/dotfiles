@@ -18,9 +18,21 @@ set -euo pipefail
 
 URL="https://youtrack.jetbrains.com/mcp"
 
+# 10-claude.sh drops the binary in ~/.local/bin, but that directory only joins PATH
+# via ~/.zshrc — an interactive rc. On a fresh machine the shell that runs `chezmoi
+# init --apply` predates that file, so `claude` is installed and still not on PATH
+# when this script runs. 30-central.sh already carries the same line for the same
+# reason. Without it this script silently no-ops, and because it is run_onchange
+# chezmoi records the hash and never retries it.
+export PATH="$HOME/.local/bin:$PATH"
+
 if ! command -v claude >/dev/null 2>&1; then
-  echo "claude CLI not found — skipping YouTrack MCP registration."
-  exit 0
+  # Deliberately a hard failure, not `exit 0`: a no-op exit would get memoized in
+  # chezmoi's script state and the server would stay unregistered forever. Failing
+  # leaves the state unrecorded, so the next `chezmoi apply` tries again.
+  echo "claude CLI not found (looked on PATH and in ~/.local/bin) — cannot register the YouTrack MCP server." >&2
+  echo "Install it (see run_once_after_10-claude.sh.tmpl), then re-run: chezmoi apply" >&2
+  exit 1
 fi
 
 # Never remove-and-re-add a server that is already correct: that discards the stored OAuth
