@@ -23,12 +23,31 @@ if ! command -v central >/dev/null 2>&1; then
   exit 0
 fi
 
+# Already wired? `central add` re-issues the per-machine proxy wire, and any edit to this
+# script makes run_once run it again, so check before doing anything. To deliberately
+# re-wire, drop apiKeyHelper from settings.json (or just run `central add claude-code`).
+SETTINGS="$HOME/.claude/settings.json"
+if [ -f "$SETTINGS" ] && grep -q '"apiKeyHelper"' "$SETTINGS"; then
+  echo "Claude Code is already wired to the JetBrains proxy — nothing to do."
+  exit 0
+fi
+
 # Authenticate, then wire Claude Code to route through the proxy globally. `central add`
 # writes `apiKeyHelper` + `env.ANTHROPIC_BASE_URL` (the per-machine proxy wire) into
 # ~/.claude/settings.json itself — the modify_ settings script preserves those keys on
 # every future `chezmoi apply`, so we never have to ask for or store the wire URL. Every
 # `claude` launch then routes through the proxy with no extra flags.
-central login || true
+#
+# Login failure used to be swallowed with `|| true`, which just moved the explosion one
+# line down: `central add` would fail on the missing session and abort the apply with a
+# downstream symptom instead of the actual cause. Report the real error and stop here.
+# Exiting non-zero also leaves the run_once state unrecorded, so the next apply retries
+# rather than treating a failed login as done.
+if ! central login; then
+  echo "central login failed — Claude Code was NOT wired to the JetBrains proxy." >&2
+  echo "Sort the login out, then re-run: chezmoi apply" >&2
+  exit 1
+fi
 central add claude-code
 {{- else }}
 # JetBrains proxy setup skipped (enableJbProxy = false)
