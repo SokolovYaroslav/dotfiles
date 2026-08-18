@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+{{- if .useOnePasswordSshAgent }}
+# Point the source repo's origin at SSH once SSH actually works.
+#
+# `chezmoi init SokolovYaroslav/dotfiles` always clones over HTTPS, and it has to:
+# bootstrapping with `--ssh` cannot work on a fresh machine, because the 1Password
+# app that holds the keys is not installed or signed in until partway through the
+# very apply that would need them. So the switch can only happen afterwards.
+#
+# HTTPS clone and pull need no credentials at all for a public repo — only push
+# does, and it fails with "could not read Username" because nothing has a token.
+# That makes a naive rewrite a bad trade: it fixes push but puts `chezmoi update`
+# behind the SSH agent, so a locked or unconfigured 1Password breaks pulling too.
+# Hence the probe below — HTTPS stays until SSH is demonstrably working, and this
+# is a plain run_ script (every apply, not run_once) so it heals itself on the
+# first apply after 1Password is ready instead of memoizing an early failure.
+set -euo pipefail
+
+SRC={{ .chezmoi.sourceDir | quote }}
+SSH_URL="git@github.com:SokolovYaroslav/dotfiles.git"
+
+url="$(git -C "$SRC" remote get-url origin 2>/dev/null || true)"
+case "$url" in
+  "$SSH_URL")
+    exit 0 ;;                                       # already switched — no probe, no network
+  https://github.com/SokolovYaroslav/dotfiles*)
+    ;;                                              # the only shape we rewrite
+  *)
+    # No origin, or a fork/mirror/local path someone set on purpose. Not ours to touch.
+    exit 0 ;;
+esac
+
+# BatchMode stops ssh prompting for a password it will never get; the agent can still
+# ask for biometrics, which is fine during an interactive apply and is why this probe
+# never runs again once the switch has happened.
+if GIT_SSH_COMMAND='ssh -o BatchMode=yes -o ConnectTimeout=5' \
+   git ls-remote "$SSH_URL" >/dev/null 2>&1; then
+  git -C "$SRC" remote set-url origin "$SSH_URL"
+  echo "Source repo origin switched to SSH: $SSH_URL"
+else
+  echo "Leaving the source repo on HTTPS — SSH to github.com is not working yet."
+  echo "  Needs the 1Password SSH agent: app signed in, and Settings → Developer →"
+  echo "  ‘Use the SSH agent’ enabled. It will switch itself on a later chezmoi apply."
+fi
+{{- else }}
+# Source remote left on HTTPS (useOnePasswordSshAgent = false) — without the agent
+# there is no SSH key to switch to, and HTTPS pull keeps working credential-free.
+{{- end }}
