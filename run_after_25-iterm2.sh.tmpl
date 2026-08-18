@@ -7,9 +7,22 @@
 # automatically into that folder, so the live file always drifts (it also dumps
 # inherited Apple* NSUserDefaults into it); tracking it strictly would mean
 # endless `chezmoi status` noise and apply clobbering the running app's prefs.
+#
+# Plain run_, not run_once_: the branch below deliberately does nothing while
+# iTerm2 is up, and a run_once_ script that exits 0 gets memoized — so a machine
+# bootstrapped from inside iTerm2 would record the skip as done and never set the
+# prefs at all. Running every apply costs two `defaults write` calls and lets it
+# fix itself the first time an apply happens with iTerm2 closed.
 set -euo pipefail
 
 PREFS_DIR="$HOME/.config/iterm2"
+
+# Already pointed at the right folder? Nothing to do, and nothing to say about it —
+# this runs on every apply now, so the common case has to be silent.
+if [ "$(defaults read com.googlecode.iterm2 PrefsCustomFolder 2>/dev/null || true)" = "$PREFS_DIR" ] \
+   && [ "$(defaults read com.googlecode.iterm2 LoadPrefsFromCustomFolder 2>/dev/null || true)" = "1" ]; then
+  exit 0
+fi
 
 # `pgrep iTerm2` does not work here: pgrep cannot see the running app at all on
 # macOS (it happily matches other GUI apps such as Finder, but never iTerm2, with
