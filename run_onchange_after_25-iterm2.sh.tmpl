@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 {{- if eq .chezmoi.os "darwin" }}
+{{- $prefsDir := printf "%s/.config/iterm2" .chezmoi.homeDir }}
+{{- $folder := output "sh" "-c" "defaults read com.googlecode.iterm2 PrefsCustomFolder 2>/dev/null || echo unset" | trim }}
+{{- $load := output "sh" "-c" "defaults read com.googlecode.iterm2 LoadPrefsFromCustomFolder 2>/dev/null || echo unset" | trim }}
+{{- $configured := and (eq $folder $prefsDir) (eq $load "1") }}
 # Point iTerm2 at the chezmoi-tracked prefs folder (~/.config/iterm2), so the
 # plist managed in this repo is what iTerm2 loads. The plist itself lives at
 # dot_config/iterm2/create_com.googlecode.iterm2.plist — `create_` so chezmoi
@@ -8,17 +12,29 @@
 # inherited Apple* NSUserDefaults into it); tracking it strictly would mean
 # endless `chezmoi status` noise and apply clobbering the running app's prefs.
 #
-# Plain run_, not run_once_: the branch below deliberately does nothing while
-# iTerm2 is up, and a run_once_ script that exits 0 gets memoized — so a machine
-# bootstrapped from inside iTerm2 would record the skip as done and never set the
-# prefs at all. Running every apply costs two `defaults write` calls and lets it
-# fix itself the first time an apply happens with iTerm2 closed.
+# Not run_once_: the branch below deliberately does nothing while iTerm2 is up, and
+# run_once_ memoizes a zero exit — so a machine bootstrapped from inside iTerm2 would
+# record that no-op as done and never set the pointer at all. Not a plain run_ either:
+# that self-heals, but chezmoi has no way to know a run_ script is a no-op without
+# running it, so `25-iterm2.sh` would sit in `chezmoi status` as `R` forever.
+#
+# So: run_onchange_, with the state this script actually depends on baked into the
+# trigger below. Once configured the trigger is a constant and status stays clean;
+# until then it also tracks whether iTerm2 is running, which is what makes the first
+# apply after you quit the app pick the work up again.
+#
+# chezmoi trigger — any change to the lines below forces a re-run:
+#   configured: {{ $configured }}
+{{- if not $configured }}
+#   app-running: {{ output "sh" "-c" "ps -Ac -o comm= | sed 's/ *$//' | grep -Fqx iTerm2 && echo yes || echo no" | trim }}
+{{- end }}
 set -euo pipefail
 
 PREFS_DIR="$HOME/.config/iterm2"
 
-# Already pointed at the right folder? Nothing to do, and nothing to say about it —
-# this runs on every apply now, so the common case has to be silent.
+# The trigger above already encodes this, but re-check at run time: after the write
+# below, the next render sees configured=true, which is itself a trigger change, so
+# there is exactly one more run — and it has to be a silent one.
 if [ "$(defaults read com.googlecode.iterm2 PrefsCustomFolder 2>/dev/null || true)" = "$PREFS_DIR" ] \
    && [ "$(defaults read com.googlecode.iterm2 LoadPrefsFromCustomFolder 2>/dev/null || true)" = "1" ]; then
   exit 0
