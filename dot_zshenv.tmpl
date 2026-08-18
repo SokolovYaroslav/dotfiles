@@ -3,6 +3,20 @@ if [ -f "$HOME/.cargo/env" ]; then
     . "$HOME/.cargo/env"
 fi
 
+# PATH lives here rather than in ~/.zshrc so that *every* zsh gets it, not just
+# interactive ones: `zsh -c`, ssh commands, and IDE-spawned shells all read this
+# file and nothing else. Claude Code and central install into ~/.local/bin, and
+# while that directory was added by ~/.zshrc alone, anything non-interactive
+# concluded those binaries did not exist. On a fresh machine that included the
+# bootstrap shell itself, so chezmoi's own run_ scripts inherited a PATH without
+# it — which is how the YouTrack MCP server went unregistered while `claude` sat
+# installed in ~/.local/bin (see run_onchange_after_40-mcp.sh.tmpl).
+#
+# `typeset -U` keeps `path` deduplicated, so re-prepending an entry later moves it
+# to the front instead of appending a second copy.
+typeset -U path PATH
+path=("$HOME/.local/bin" "$HOME/bin" $path)
+
 # YouTrack REST API base URL. Not a secret, so it is set unconditionally. There is
 # deliberately no token here: the YouTrack MCP server authenticates over OAuth (see
 # run_onchange_after_40-mcp.sh.tmpl), and ad-hoc REST calls can pull a token when they

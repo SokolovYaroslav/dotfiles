@@ -16,8 +16,12 @@ PROMPT=${PROMPT//"%c"/"%~"}
 
 # User configuration
 
-export PATH="$HOME/bin:$PATH"
-export PATH="$HOME/.local/bin:$PATH"
+# PATH itself is set in ~/.zshenv (so non-interactive shells get it too). This is
+# only a re-assert of the front: ~/.zprofile runs `brew shellenv` after ~/.zshenv,
+# which unconditionally prepends the Homebrew prefix and pushes these two behind
+# it. ~/.zshrc is the last file sourced, so repeating the assignment here restores
+# the intended precedence. `typeset -U path` in ~/.zshenv stops it duplicating.
+path=("$HOME/.local/bin" "$HOME/bin" $path)
 {{ if .useOnePasswordSshAgent }}
 # Route ssh-agent through 1Password (keys live there). ssh/git also use the agent
 # via IdentityAgent in ~/.ssh/config; this points sock-reading tools at it too.
