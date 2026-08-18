@@ -4,6 +4,13 @@
 # ad-hoc `op item get` calls — even though Claude Code no longer goes through it.
 # Installing the binary is not enough on its own — you must also toggle "Integrate with
 # 1Password CLI" in the desktop app (Settings → Developer) for biometric unlock. See README.
+#
+# This MUST stay a before_ script. ~/.ssh/authorized_keys is a template that calls
+# onepasswordRead, so `op` has to exist while chezmoi is applying files — not after.
+# As a run_once_after_ script it deadlocked a fresh machine: file application reached
+# .ssh/authorized_keys, found no op, aborted the apply, and so never reached the
+# after_ script that would have installed it. Re-running could not break the cycle;
+# only installing op by hand did.
 set -euo pipefail
 
 if command -v op >/dev/null 2>&1; then
@@ -17,7 +24,11 @@ elif [ -x /usr/local/bin/brew ]; then eval "$(/usr/local/bin/brew shellenv)"; fi
 if command -v brew >/dev/null 2>&1; then
   brew install 1password-cli
 else
-  echo "op not found and Homebrew unavailable — install it manually, then re-run: chezmoi apply"
+  # Non-zero on purpose. Exiting 0 would let run_once record this as done and never
+  # retry, and file application would then fail on .ssh/authorized_keys a moment later
+  # with a far less obvious error than this one.
+  echo "op not found and Homebrew unavailable — install it manually, then re-run: chezmoi apply" >&2
+  exit 1
 fi
 {{- else }}
 if command -v apt-get >/dev/null 2>&1; then
@@ -36,6 +47,8 @@ if command -v apt-get >/dev/null 2>&1; then
     | sudo gpg --yes --dearmor --output /usr/share/debsig/keyrings/AC2D62742012EA22/debsig.gpg
   sudo apt-get update && sudo apt-get install -y 1password-cli
 else
-  echo "op not found and apt unavailable — install the 1Password CLI for your distro, then re-run: chezmoi apply"
+  # Non-zero for the same reason as the Homebrew branch above.
+  echo "op not found and apt unavailable — install the 1Password CLI for your distro, then re-run: chezmoi apply" >&2
+  exit 1
 fi
 {{- end }}
