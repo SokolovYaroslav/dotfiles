@@ -11,14 +11,25 @@ set -euo pipefail
 
 PREFS_DIR="$HOME/.config/iterm2"
 
+# `pgrep iTerm2` does not work here: pgrep cannot see the running app at all on
+# macOS (it happily matches other GUI apps such as Finder, but never iTerm2, with
+# or without -x/-f). The old guard therefore always took the "not running" branch
+# and wrote prefs underneath a live app. `ps` does see it — `-Ac` prints the bare
+# command name, padded, so trim the trailing blanks before an anchored match.
+iterm2_is_running() {
+  ps -Ac -o comm= | sed 's/ *$//' | grep -Fqx iTerm2
+}
+
 # Setting these via `defaults write` while iTerm2 is running is unsafe: on quit
 # iTerm2 flushes its in-memory prefs and clobbers the change. Only write when
 # it isn't running; otherwise tell the user to flip the toggle in-app.
-if pgrep -xq iTerm2; then
+if iterm2_is_running; then
   echo "iTerm2 is running — not touching its prefs to avoid a write race."
   echo "Enable it in-app: Settings → General → Settings →"
   echo "  ‘Load preferences from a custom folder or URL’ → $PREFS_DIR"
   echo "  and set ‘Save changes’ to ‘Automatically’."
+  echo "Do NOT click ‘Save Current Settings to Folder’ — that overwrites the"
+  echo "  chezmoi-tracked plist in $PREFS_DIR with this machine's stock prefs."
 else
   defaults write com.googlecode.iterm2 PrefsCustomFolder -string "$PREFS_DIR"
   defaults write com.googlecode.iterm2 LoadPrefsFromCustomFolder -bool true
